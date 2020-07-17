@@ -7,13 +7,14 @@ const OPTIONS = {
   transactionConfirmationBlocks: 1,
   transactionBlockTimeout: 5
 };
-
-const web3 = new Web3(ganache.provider(), null, OPTIONS);
+const provider = ganache.provider();
+const web3 = new Web3(provider, null, OPTIONS);
 const { interface, bytecode} = require('../compile');
 
 let accounts;
 let helloWorld;
-
+const INITIAL_MESSAGE = 'Hello World!';
+const UPDATED_MESSAGE = 'Changing the initial message';
 beforeEach(async () => {
 	//Get a list of all accounts 
 	accounts = await web3.eth.getAccounts();
@@ -23,32 +24,32 @@ beforeEach(async () => {
 	helloWorld = await new web3.eth.Contract(JSON.parse(interface))
 		.deploy({ 
 			data: bytecode, 
-			arguments: ['Hello World!'] 
+			arguments: [INITIAL_MESSAGE] 
 		})
-		.send({ from: accounts[0], gas: '1000000' });
+		.send({ 
+			from: accounts[0], 
+			gas: '1000000' 
+		});
 });
 
 describe('HelloWorld', () => {
+
 	it('Deploys a contract', () => {
-		console.log(helloWorld);
+		assert.ok(helloWorld.options.address);
 	});
+
+	it('Has a dafault message', async() => {
+		const message = await helloWorld.methods.message().call();
+		assert.equal(message, INITIAL_MESSAGE);
+	});
+
+	it('Can change the message', async() => {
+		await helloWorld.methods.setMessage(UPDATED_MESSAGE)
+		.send({ 
+			from: accounts[0]
+		});
+		const message = await helloWorld.methods.message().call();
+		assert.equal(message, UPDATED_MESSAGE);
+	});
+
 });
-
-
-
-/*class Car {
-	park() {
-		return 'stopped';
-	}
-
-	drive() {
-		return 'vroom';
-	}
-} 
-
-describe('Car',() => {
-	it('can park',() => {
-		const car = new Car();
-		assert.equal(car.park(), 'stopped');
-	});
-});*/
